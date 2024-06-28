@@ -10,7 +10,10 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License"
 ]
 dependencies = [
-    "click"
+    "click",
+    "requests",
+    "beautifulsoup4",
+    "click-default-group"
 ]
 
 [project.urls]
@@ -24,3 +27,7 @@ easycit = "easycit.cli:cli"
 
 [project.optional-dependencies]
 test = ["pytest"]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
