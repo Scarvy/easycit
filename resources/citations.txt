@@ -1,0 +1,3 @@
+www.designgurus.io/blog/what-is-java-map-class-and-its-uses
+www.geeksforgeeks.org/java-string-equalsignorecase-method-with-examples/
+www.smashingmagazine.com/2017/03/world-wide-web-not-wealthy-western-web-part-1/

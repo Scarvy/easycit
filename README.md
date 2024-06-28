@@ -37,8 +37,16 @@ easycit <URL> -f <format>
 * -f, --fmt [mla|apa|chicago|IEEE|Harvard]: The citation format (default: mla).
 * --no-date: Omit the accessed date from the citation.
 * --no-url: Omit the URL from the citation.
+* --override <field> <value>: Override specific fields (e.g., --override author "John Doe").
 
-##### Examples
+### Batch Processing
+To generate citations for multiple URLs from a file, use the following command:
+
+```bash
+easycit batch_citations <file> -f <format>
+```
+
+### Examples
 
 **Generate an MLA citation:**
 
@@ -56,6 +64,12 @@ easycit https://realpython.com/python-serialize-data/ -f apa --no-date
 
 ```bash
 easycit https://realpython.com/python-serialize-data/ -f chicago --no-url
+```
+
+**Override the author and title fields:**
+
+```bash
+easycit https://realpython.com/python-serialize-data/ -f apa --override author "John Doe"
 ```
 
 ## Development

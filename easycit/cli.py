@@ -44,11 +44,79 @@ def cli():
     is_flag=True,
     help="Omit the URL from the citation",
 )
-def create_citation(url, fmt, no_date, no_url):
+@click.option(
+    "--override",
+    type=(str, str),
+    multiple=True,
+    help="Override specific fields. Usage: --override <field> <value>",
+)
+def create_citation(url, fmt, no_date, no_url, override):
     """Generate citations in common formats."""
     url_data = get_webpage_details(url)
+
+    # Apply overrides
+    overrides = dict(override)
+    if "author" in overrides:
+        url_data.author = overrides["author"]
+    if "title" in overrides:
+        url_data.title = overrides["title"]
+    if "publisher" in overrides:
+        url_data.publisher = overrides["publisher"]
+    if "pub_date" in overrides:
+        url_data.pub_date = overrides["pub_date"]
+
     citation = get_citation(url, url_data, fmt, no_date, no_url)
-    print(citation)
+    click.echo(citation)
+
+
+@cli.command(name="batch")
+@click.argument("f", type=click.File("r"))
+@click.option(
+    "-f",
+    "--fmt",
+    type=click.Choice(
+        ["mla", "apa", "chicago", "IEEE", "Harvard"], case_sensitive=False
+    ),
+    default="mla",
+    show_default=True,
+    help="The citation format",
+)
+@click.option(
+    "--no-date",
+    is_flag=True,
+    help="Omit the accessed date from the citation",
+)
+@click.option(
+    "--no-url",
+    is_flag=True,
+    help="Omit the URL from the citation",
+)
+@click.option(
+    "--override",
+    type=(str, str),
+    multiple=True,
+    help="Override specific fields. Usage: --override <field> <value>",
+)
+def batch_citations(f, fmt, no_date, no_url, override):
+    """Generate citations for multiple URLs."""
+    urls = [line.strip() for line in f.readlines()]
+    for url in urls:
+        if url:
+            url_data = get_webpage_details(url)
+
+            # Apply overrides
+            overrides = dict(override)
+            if "author" in overrides:
+                url_data.author = overrides["author"]
+            if "title" in overrides:
+                url_data.title = overrides["title"]
+            if "publisher" in overrides:
+                url_data.publisher = overrides["publisher"]
+            if "pub_date" in overrides:
+                url_data.pub_date = overrides["pub_date"]
+
+            citation = get_citation(url, url_data, fmt, no_date, no_url)
+            click.echo(citation)
 
 
 def get_webpage_details(url):
