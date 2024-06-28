@@ -16,13 +16,13 @@ class URLData:
     publisher: str = None
 
 
-@click.group(cls=DefaultGroup, default="create_citation", default_if_no_args=True)
+@click.group(cls=DefaultGroup, default="create", default_if_no_args=True)
 @click.version_option()
 def cli():
     """Easily create citations from website URLs."""
 
 
-@cli.command(name="create_citation")
+@cli.command(name="create")
 @click.argument("url")
 @click.option(
     "-f",
@@ -165,42 +165,70 @@ def get_citation(url, url_data, fmt, no_date, no_url):
     """Generates a citation string based on the extracted URL data and specified format."""
     date_accessed = datetime.today().strftime("%d %B %Y") if not no_date else None
 
-    if fmt.lower() == "apa":
-        citation = f'{url_data.author or ""}. (n.d.). {url_data.title or ""}. {url_data.publisher or ""}.'
-        if date_accessed:
-            citation += f" Retrieved {date_accessed}"
-        if not no_url:
-            citation += f", from {url}"
-    elif fmt.lower() == "mla":
-        citation = f'{url_data.author or ""}. "{url_data.title or ""}." {url_data.publisher or ""}'
-        if not no_url:
-            citation += f", {url}"
-        if date_accessed:
-            citation += f". Accessed {date_accessed}."
-    elif fmt.lower() == "chicago":
-        citation = f'{url_data.author or ""}. "{url_data.title or ""}." {url_data.publisher or ""}.'
-        if date_accessed:
-            citation += f" Accessed {date_accessed}."
-        if not no_url:
-            citation += f" {url}."
-    elif fmt.lower() == "ieee":
-        citation = f'{url_data.author or ""}, "{url_data.title or ""}," {url_data.publisher or ""}. [Online]. Available: {url}'
-        if date_accessed:
-            citation += f'. [Accessed: {datetime.today().strftime("%d-%b-%Y")}]'
-        if no_url:
-            citation = citation.replace(f" Available: {url}", "")
-    elif fmt.lower() == "harvard":
-        citation = (
-            f'{url_data.author or ""}, {url_data.title or ""}. Available at: {url}'
-        )
-        if date_accessed:
-            citation += f" (Accessed: {date_accessed})"
-        if no_url:
-            citation = citation.replace(f" Available at: {url}", "")
-    else:
-        citation = "Unsupported format. Please use one of the following: apa, mla, chicago, IEEE, Harvard."
+    citation_parts = []
 
-    citation = re.sub(r"\s+", " ", citation).strip()
+    if fmt.lower() == "apa":
+        if url_data.author:
+            citation_parts.append(f"{url_data.author}")
+        citation_parts.append("(n.d.).")
+        if url_data.title:
+            citation_parts.append(f"{url_data.title}.")
+        if url_data.publisher:
+            citation_parts.append(f"{url_data.publisher}.")
+        if date_accessed:
+            citation_parts.append(f"Retrieved {date_accessed}")
+        if not no_url:
+            citation_parts.append(f"from {url}")
+    elif fmt.lower() == "mla":
+        if url_data.author:
+            citation_parts.append(f"{url_data.author}.")
+        if url_data.title:
+            citation_parts.append(f'"{url_data.title}."')
+        if url_data.publisher:
+            citation_parts.append(f"{url_data.publisher}")
+        if not no_url:
+            citation_parts.append(f"{url}")
+        if date_accessed:
+            citation_parts.append(f"Accessed {date_accessed}.")
+    elif fmt.lower() == "chicago":
+        if url_data.author:
+            citation_parts.append(f"{url_data.author}.")
+        if url_data.title:
+            citation_parts.append(f'"{url_data.title}."')
+        if url_data.publisher:
+            citation_parts.append(f"{url_data.publisher}.")
+        if date_accessed:
+            citation_parts.append(f"Accessed {date_accessed}.")
+        if not no_url:
+            citation_parts.append(f"{url}.")
+    elif fmt.lower() == "ieee":
+        if url_data.author:
+            citation_parts.append(f"{url_data.author},")
+        if url_data.title:
+            citation_parts.append(f'"{url_data.title},"')
+        if url_data.publisher:
+            citation_parts.append(f"{url_data.publisher}.")
+        citation_parts.append("[Online].")
+        if not no_url:
+            citation_parts.append(f"Available: {url}")
+        if date_accessed:
+            citation_parts.append(
+                f'[Accessed: {datetime.today().strftime("%d-%b-%Y")}]'
+            )
+    elif fmt.lower() == "harvard":
+        if url_data.author:
+            citation_parts.append(f"{url_data.author},")
+        if url_data.title:
+            citation_parts.append(f"{url_data.title}.")
+        if not no_url:
+            citation_parts.append(f"Available at: {url}")
+        if date_accessed:
+            citation_parts.append(f"(Accessed: {date_accessed})")
+    else:
+        return "Unsupported format. Please use one of the following: apa, mla, chicago, IEEE, Harvard."
+
+    citation = " ".join(part for part in citation_parts if part).strip()
+    citation = re.sub(r"\s+", " ", citation)
     citation = re.sub(r"([,\.])\1+", r"\1", citation)
     citation = re.sub(r"\s([,\.])", r"\1", citation)
     return citation
