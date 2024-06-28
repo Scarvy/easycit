@@ -21,8 +21,10 @@ jobs:
         cache-dependency-path: pyproject.toml
     - name: Install dependencies
       run: |
-        pip install '.[test]'
+        pip install -r requirements.txt
+    - name: Install package in editable mode
+      run: |
+        pip install -e .
     - name: Run tests
       run: |
         pytest
-
