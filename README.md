@@ -9,9 +9,6 @@ Easily create citations from website URLs.
 
 ## Installation
 
-> [!WARNING]
-> Not available to pip install... yet. I apologize for the inconvenience.
-
 Install this tool using `pip`:
 ```bash
 pip install easycit
