@@ -1,33 +1,28 @@
-[project]
+[tool.poetry]
 name = "easycit"
-version = "0.1"
-description = "Easily create citations from website URLs"
+version = "0.1.0"
+description = "Easily create citations from URLs"
+authors = ["Scott Carvalho <scottcarvalho71@gmail.com>"]
+license = "Apache-2.0"
 readme = "README.md"
-authors = [{name = "Scott Carvalho"}]
-license = {text = "Apache-2.0"}
-requires-python = ">=3.8"
 classifiers = [
     "License :: OSI Approved :: Apache Software License"
 ]
-dependencies = [
-    "click",
-    "requests",
-    "beautifulsoup4",
-    "click-default-group"
-]
 
-[project.urls]
-Homepage = "https://github.com/Scarvy/easycit"
-Changelog = "https://github.com/Scarvy/easycit/releases"
-Issues = "https://github.com/Scarvy/easycit/issues"
-CI = "https://github.com/Scarvy/easycit/actions"
+[tool.poetry.dependencies]
+python = "^3.8"
+click = "^8.1.7"
+requests = "^2.32.3"
+beautifulsoup4 = "^4.12.3"
+click-default-group = "^1.2.4"
 
-[project.entry-points.console_scripts]
-easycit = "easycit.cli:cli"
-
-[project.optional-dependencies]
-test = ["pytest"]
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.2"
+ruff = "^0.5.0"
 
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+easycit = 'easycit.cli:cli'

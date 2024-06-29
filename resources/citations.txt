@@ -1,2 +1,0 @@
-https://realpython.com/python-serialize-data/
-https://www.baeldung.com/java-localization-messages-formatting
