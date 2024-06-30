@@ -1,0 +1,2 @@
+https://realpython.com/python-serialize-data/
+https://www.nytimes.com/2024/04/06/technology/tech-giants-harvest-data-artificial-intelligence.html
