@@ -15,10 +15,13 @@ click = "^8.1.7"
 requests = "^2.32.3"
 beautifulsoup4 = "^4.12.3"
 click-default-group = "^1.2.4"
+sqlite-utils = "^3.36"
+pyperclip = "^1.9.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"
 ruff = "^0.5.0"
+pytest-mock = "^3.14.0"
 
 [build-system]
 requires = ["poetry-core"]

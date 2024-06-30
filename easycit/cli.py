@@ -1,19 +1,34 @@
 import re
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
 
 import click
+import pyperclip
 import requests
+import sqlite_utils
 from bs4 import BeautifulSoup
 from click_default_group import DefaultGroup
 
 
 @dataclass
-class URLData:
+class CitationMetaData:
+    citation: str = None
+    format_type: str = None
+    url: str = None
     title: str = None
     author: str = None
-    pub_date: str = None
     publisher: str = None
+    date_published: str = None
+    date_accessed: datetime = None
+
+
+@dataclass
+class WebPageDetails:
+    url: str = None
+    title: str = None
+    author: str = None
+    publisher: str = None
+    date_published: str = None
 
 
 @click.group(cls=DefaultGroup, default="create", default_if_no_args=True)
@@ -50,23 +65,32 @@ def cli():
     multiple=True,
     help="Override specific fields. Usage: --override <field> <value>",
 )
-def create_citation(url, fmt, no_date, no_url, override):
+@click.option(
+    "--dbname", default="citations.db", help="Name of the SQLite database file."
+)
+@click.option(
+    "--dump", is_flag=False, default=True, help="Don't dump citation to stdout."
+)
+@click.option(
+    "--log",
+    is_flag=False,
+    default=True,
+    help="Prevent citation from being logged into the database.",
+)
+def create_citation(url, fmt, no_date, no_url, override, dbname, dump, log):
     """Generate citations in common formats."""
-    url_data = get_webpage_details(url)
 
-    # Apply overrides
-    overrides = dict(override)
-    if "author" in overrides:
-        url_data.author = overrides["author"]
-    if "title" in overrides:
-        url_data.title = overrides["title"]
-    if "publisher" in overrides:
-        url_data.publisher = overrides["publisher"]
-    if "pub_date" in overrides:
-        url_data.pub_date = overrides["pub_date"]
+    citation_metadata = get_citation_metadata(url, fmt, no_date, no_url, dict(override))
 
-    citation = get_citation(url, url_data, fmt, no_date, no_url)
-    click.echo(citation)
+    if dump:
+        click.echo(citation_metadata.citation)
+    if log:
+        db = sqlite_utils.Database(dbname)
+        citations_table = db.table("citations")
+        citations_table.upsert(asdict(citation_metadata), hash_id="id")
+
+    # copy to clipboard
+    pyperclip.copy(citation_metadata.citation)
 
 
 @cli.command(name="batch")
@@ -97,30 +121,82 @@ def create_citation(url, fmt, no_date, no_url, override):
     multiple=True,
     help="Override specific fields. Usage: --override <field> <value>",
 )
-def batch_citations(f, fmt, no_date, no_url, override):
+@click.option(
+    "--dbname", default="citations.db", help="Name of the SQLite database file."
+)
+@click.option(
+    "--dump", is_flag=False, default=True, help="Don't dump citation to stdout."
+)
+@click.option(
+    "--log",
+    is_flag=False,
+    default=True,
+    help="Prevent citation from being logged into the database.",
+)
+def batch_citations(f, fmt, no_date, no_url, override, dbname, dump, log):
     """Generate citations for multiple URLs."""
     urls = [line.strip() for line in f.readlines()]
+
+    citations = []
+
     for url in urls:
         if url:
-            url_data = get_webpage_details(url)
+            citation_metadata = get_citation_metadata(
+                url, fmt, no_date, no_url, dict(override)
+            )
 
-            # Apply overrides
-            overrides = dict(override)
-            if "author" in overrides:
-                url_data.author = overrides["author"]
-            if "title" in overrides:
-                url_data.title = overrides["title"]
-            if "publisher" in overrides:
-                url_data.publisher = overrides["publisher"]
-            if "pub_date" in overrides:
-                url_data.pub_date = overrides["pub_date"]
+            if dump:
+                click.echo(citation_metadata.citation)
+            if log:
+                db = sqlite_utils.Database(dbname)
+                citations_table = db.table("citations")
+                citations_table.upsert(asdict(citation_metadata), hash_id="id")
 
-            citation = get_citation(url, url_data, fmt, no_date, no_url)
-            click.echo(citation)
+            # copy to clipboard
+            citations.append(citation_metadata.citation)
+
+    # build a single string of all of the citations and copy to the clipboard
+    pyperclip.copy("\n".join(citation for citation in citations))
 
 
-def get_webpage_details(url):
-    """Extracts title, author, publication date, and publisher from the given URL."""
+def get_citation_metadata(
+    url: str, fmt: str, no_date: bool, no_url: bool, overrides: dict
+) -> CitationMetaData:
+    """Get citation metadata from webpage and user ovverride values.
+
+    Args:
+        url (str): the url of the webpage.
+        fmt (str): the citation format style.
+        no_date (bool): If to omit the date from the citation string. Default is False.
+        no_url (bool): If to omit the url from the citation string. Default to False.
+        overrides (dict): A dictionary of values to override in the citation string.
+
+    Returns:
+        CitationMetaData: a dataclass containing metadata about the citation and webpage.
+    """
+    webpage_metadata = get_webpage_details(url)
+
+    if "author" in overrides:
+        webpage_metadata.author = overrides["author"]
+    if "title" in overrides:
+        webpage_metadata.title = overrides["title"]
+    if "publisher" in overrides:
+        webpage_metadata.publisher = overrides["publisher"]
+    if "pub_date" in overrides:
+        webpage_metadata.date_published = overrides["pub_date"]
+
+    return generate_citation(webpage_metadata, fmt, no_date, no_url)
+
+
+def get_webpage_details(url: str) -> WebPageDetails:
+    """Extracts title, author, publication date, and publisher from the given URL.
+
+    Args:
+        url (str): the url of the webpage.
+
+    Returns:
+        WebPageDetails: a dataclass containing webpage metadata.
+    """
     try:
         response = requests.get(url)
         soup = BeautifulSoup(response.content, "html.parser")
@@ -154,74 +230,90 @@ def get_webpage_details(url):
             else None
         )
 
-        return URLData(
-            title=title, author=author, pub_date=pub_date, publisher=publisher
+        return WebPageDetails(
+            url=url,
+            title=title,
+            author=author,
+            publisher=publisher,
+            date_published=pub_date,
         )
     except Exception:
-        return URLData()
+        return WebPageDetails()
 
 
-def get_citation(url, url_data, fmt, no_date, no_url):
-    """Generates a citation string based on the extracted URL data and specified format."""
+def generate_citation(
+    website_metadata: WebPageDetails, fmt: str, no_date: bool, no_url: bool
+) -> CitationMetaData:
+    """Generates a citation string based on the extracted URL data and specified format.
+
+    Args:
+        website_metadata (WebPageDetails): a dataclass of website meta.
+        fmt (str): the citation format style.
+        no_date (bool): If to omit the date from the citation string. Default is False.
+        no_url (bool): If to omit the url from the citation string. Default to False.
+
+    Returns:
+        CitationMetaData: _description_
+    """
     date_accessed = datetime.today().strftime("%d %B %Y") if not no_date else None
 
     citation_parts = []
 
     if fmt.lower() == "apa":
-        if url_data.author:
-            citation_parts.append(f"{url_data.author}")
+        if website_metadata.author:
+            citation_parts.append(f"{website_metadata.author}")
         citation_parts.append("(n.d.).")
-        if url_data.title:
-            citation_parts.append(f"{url_data.title}.")
-        if url_data.publisher:
-            citation_parts.append(f"{url_data.publisher}.")
+        if website_metadata.title:
+            citation_parts.append(f"{website_metadata.title}.")
+        if website_metadata.publisher:
+            citation_parts.append(f"{website_metadata.publisher}.")
         if date_accessed:
             citation_parts.append(f"Retrieved {date_accessed}")
         if not no_url:
-            citation_parts.append(f"from {url}")
+            citation_parts.append(f"from {website_metadata.url}")
     elif fmt.lower() == "mla":
-        if url_data.author:
-            citation_parts.append(f"{url_data.author}.")
-        if url_data.title:
-            citation_parts.append(f'"{url_data.title}."')
-        if url_data.publisher:
-            citation_parts.append(f"{url_data.publisher}")
+        if website_metadata.author:
+            citation_parts.append(f"{website_metadata.author}.")
+        if website_metadata.title:
+            citation_parts.append(f'"{website_metadata.title}."')
+        if website_metadata.publisher:
+            citation_parts.append(f"{website_metadata.publisher}")
         if not no_url:
-            citation_parts.append(f"{url}")
+            citation_parts.append(f"{website_metadata.url}")
         if date_accessed:
             citation_parts.append(f"Accessed {date_accessed}.")
     elif fmt.lower() == "chicago":
-        if url_data.author:
-            citation_parts.append(f"{url_data.author}.")
-        if url_data.title:
-            citation_parts.append(f'"{url_data.title}."')
-        if url_data.publisher:
-            citation_parts.append(f"{url_data.publisher}.")
+        if website_metadata.author:
+            citation_parts.append(f"{website_metadata.author}.")
+        if website_metadata.title:
+            citation_parts.append(f'"{website_metadata.title}."')
+        if website_metadata.publisher:
+            citation_parts.append(f"{website_metadata.publisher}.")
         if date_accessed:
             citation_parts.append(f"Accessed {date_accessed}.")
         if not no_url:
-            citation_parts.append(f"{url}.")
+            citation_parts.append(f"{website_metadata.url}.")
     elif fmt.lower() == "ieee":
-        if url_data.author:
-            citation_parts.append(f"{url_data.author},")
-        if url_data.title:
-            citation_parts.append(f'"{url_data.title},"')
-        if url_data.publisher:
-            citation_parts.append(f"{url_data.publisher}.")
+        if website_metadata.author:
+            citation_parts.append(f"{website_metadata.author},")
+        if website_metadata.title:
+            citation_parts.append(f'"{website_metadata.title},"')
+        if website_metadata.publisher:
+            citation_parts.append(f"{website_metadata.publisher}.")
         citation_parts.append("[Online].")
         if not no_url:
-            citation_parts.append(f"Available: {url}")
+            citation_parts.append(f"Available: {website_metadata.url}")
         if date_accessed:
             citation_parts.append(
                 f'[Accessed: {datetime.today().strftime("%d-%b-%Y")}]'
             )
     elif fmt.lower() == "harvard":
-        if url_data.author:
-            citation_parts.append(f"{url_data.author},")
-        if url_data.title:
-            citation_parts.append(f"{url_data.title}.")
+        if website_metadata.author:
+            citation_parts.append(f"{website_metadata.author},")
+        if website_metadata.title:
+            citation_parts.append(f"{website_metadata.title}.")
         if not no_url:
-            citation_parts.append(f"Available at: {url}")
+            citation_parts.append(f"Available at: {website_metadata.url}")
         if date_accessed:
             citation_parts.append(f"(Accessed: {date_accessed})")
     else:
@@ -231,4 +323,14 @@ def get_citation(url, url_data, fmt, no_date, no_url):
     citation = re.sub(r"\s+", " ", citation)
     citation = re.sub(r"([,\.])\1+", r"\1", citation)
     citation = re.sub(r"\s([,\.])", r"\1", citation)
-    return citation
+
+    return CitationMetaData(
+        citation=citation,
+        date_accessed=date_accessed,
+        format_type=fmt,
+        **{
+            key: value
+            for key, value in asdict(website_metadata).items()
+            if key not in ["citation", "date_accessed", "format_type"]
+        },
+    )
