@@ -29,7 +29,7 @@ python -m easycit --help
 To generate a citation, use the following command:
 
 ```bash
-easycit <URL> -f <format>
+easycit create <URL> -f <format>
 ```
 
 #### Available Options
@@ -38,38 +38,83 @@ easycit <URL> -f <format>
 * --no-date: Omit the accessed date from the citation.
 * --no-url: Omit the URL from the citation.
 * --override <field> <value>: Override specific fields (e.g., --override author "John Doe").
+* --dbname <dbname>: Specify the SQLite database file (default: citations.db).
+* --dump: Don't dump citation to stdout (default: True).
+* --log: Prevent citation from being logged into the database (default: True).
 
 ### Batch Processing
+
 To generate citations for multiple URLs from a file, use the following command:
 
 ```bash
-easycit batch_citations <file> -f <format>
+easycit batch <file> -f <format>
 ```
+
+#### Available Options
+
+* -f, --fmt [mla|apa|chicago|IEEE|Harvard]: The citation format (default: mla).
+* --no-date: Omit the accessed date from the citation.
+* --no-url: Omit the URL from the citation.
+* --override <field> <value>: Override specific fields (e.g., --override author "John Doe").
+* --dbname <dbname>: Specify the SQLite database file (default: citations.db).
+* --dump: Don't dump citation to stdout (default: True).
+* --log: Prevent citation from being logged into the database (default: True).
+
+### List Logs
+
+To list the logged citations, use the following command:
+
+```bash
+easycit logs list
+```
+
+#### Available Options
+
+* -n, --count <number>: Number of entries to show - defaults to 3, use 0 for all.
+* -q, --query <string>: Search for logs matching this string.
 
 ### Examples
 
 **Generate an MLA citation:**
 
 ```bash
-easycit https://realpython.com/python-serialize-data/ -f mla
+easycit create https://realpython.com/python-serialize-data/ -f mla
 ```
 
 **Generate an APA citation without the accessed date:**
 
 ```bash
-easycit https://realpython.com/python-serialize-data/ -f apa --no-date
+easycit create https://realpython.com/python-serialize-data/ -f apa --no-date
 ```
 
 **Generate a Chicago citation without the URL:**
 
 ```bash
-easycit https://realpython.com/python-serialize-data/ -f chicago --no-url
+easycit create https://realpython.com/python-serialize-data/ -f chicago --no-url
 ```
 
 **Override the author and title fields:**
 
 ```bash
-easycit https://realpython.com/python-serialize-data/ -f apa --override author "John Doe"
+easycit create https://realpython.com/python-serialize-data/ -f apa --override author "John Doe" --override title "Custom Title"
+```
+
+**Generate citations for multiple URLs from a file:**
+
+```bash
+easycit batch urls.txt -f mla
+```
+
+**List all logged citations:**
+
+```bash
+easycit logs list --count 3
+```
+
+**Search for logged citations containing a specific string:**
+
+```bash
+easycit logs list --query "Python"
 ```
 
 ## Development
