@@ -88,6 +88,7 @@ def create_citation(url, fmt, no_date, no_url, override, dbname, dump, log):
         db = sqlite_utils.Database(dbname)
         citations_table = db.table("citations")
         citations_table.upsert(asdict(citation_metadata), hash_id="id")
+        citations_table.populate_fts(["citation"])
 
     # copy to clipboard
     pyperclip.copy(citation_metadata.citation)
@@ -151,12 +152,73 @@ def batch_citations(f, fmt, no_date, no_url, override, dbname, dump, log):
                 db = sqlite_utils.Database(dbname)
                 citations_table = db.table("citations")
                 citations_table.upsert(asdict(citation_metadata), hash_id="id")
+                citations_table.populate_fts(["citation"])
 
             # copy to clipboard
             citations.append(citation_metadata.citation)
 
     # build a single string of all of the citations and copy to the clipboard
     pyperclip.copy("\n".join(citation for citation in citations))
+
+
+CITATIONS_SQL = """
+    select
+        id,
+        citation,
+        format_type,
+        url,
+        title,
+        author,
+        publisher,
+        date_published,
+        date_accessed
+    from
+        citations
+    order by
+        id{limit}
+    """
+
+
+@cli.group(
+    cls=DefaultGroup,
+    default="list",
+    default_if_no_args=True,
+)
+def logs():
+    "Tools for exploring logged citations."
+
+
+@logs.command(name="list")
+@click.option(
+    "-n",
+    "--count",
+    type=int,
+    default=None,
+    help="Number of entries to show - defaults to 3, use 0 for all",
+)
+@click.option("-q", "--query", help="Search for logs matching this string")
+def logs_list(count, query):
+    """Show logged citations"""
+    db = sqlite_utils.Database("citations.db")
+    db["citations"].populate_fts(["citation"])
+
+    limit = ""
+    if count is not None and count > 0:
+        limit = " limit {}".format(count)
+
+    sql = CITATIONS_SQL
+
+    sql_format = {"limit": limit}
+
+    final_sql = sql.format(**sql_format)
+
+    if query:
+        for row in list(db["citations"].search(query)):
+            click.echo(f"{row["citation"]}")
+    else:
+        rows = list(db.query(final_sql))
+        for row in rows:
+            click.echo(f"{row["citation"]}")
 
 
 def get_citation_metadata(
