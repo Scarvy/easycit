@@ -38,7 +38,6 @@ easycit create <URL> -f <format>
 * --no-date: Omit the accessed date from the citation.
 * --no-url: Omit the URL from the citation.
 * --override <field> <value>: Override specific fields (e.g., --override author "John Doe").
-* --dbname <dbname>: Specify the SQLite database file (default: citations.db).
 * --dump: Don't dump citation to stdout (default: True).
 * --log: Prevent citation from being logged into the database (default: True).
 
@@ -56,7 +55,6 @@ easycit batch <file> -f <format>
 * --no-date: Omit the accessed date from the citation.
 * --no-url: Omit the URL from the citation.
 * --override <field> <value>: Override specific fields (e.g., --override author "John Doe").
-* --dbname <dbname>: Specify the SQLite database file (default: citations.db).
 * --dump: Don't dump citation to stdout (default: True).
 * --log: Prevent citation from being logged into the database (default: True).
 
@@ -115,6 +113,14 @@ easycit logs list --count 3
 
 ```bash
 easycit logs list --query "Python"
+```
+
+## Browsing logs using Datasette
+
+You can also use [Datesette](https://datasette.io/) to browse your logs like this:
+
+```bash
+datasette "$(easycit logs path)"
 ```
 
 ## Development
