@@ -248,10 +248,9 @@ def logs_list(count, query):
 
 
 @logs.command(name="path")
-@click.option("--dbname", default="logs.db", help="Name of the SQLite database file.")
-def logs_path(dbname):
+def logs_path():
     "Output the path to the logs.db file"
-    click.echo(user_database_path(dbname))
+    click.echo(user_database_path())
 
 
 def get_citation_metadata(
