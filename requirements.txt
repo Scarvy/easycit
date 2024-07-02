@@ -2,3 +2,5 @@ click
 requests
 beautifulsoup4
 click-default-group
+sqlite-utils
+pyperclip

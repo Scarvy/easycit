@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "easycit"
-version = "0.1.0"
+version = "0.2.0"
 description = "Easily create citations from URLs"
 authors = ["Scott Carvalho <scottcarvalho71@gmail.com>"]
 license = "Apache-2.0"
@@ -8,6 +8,7 @@ readme = "README.md"
 classifiers = [
     "License :: OSI Approved :: Apache Software License"
 ]
+exclude = ["examples/*"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
@@ -15,10 +16,13 @@ click = "^8.1.7"
 requests = "^2.32.3"
 beautifulsoup4 = "^4.12.3"
 click-default-group = "^1.2.4"
+sqlite-utils = "^3.36"
+pyperclip = "^1.9.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"
 ruff = "^0.5.0"
+pytest-mock = "^3.14.0"
 
 [build-system]
 requires = ["poetry-core"]
