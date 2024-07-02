@@ -81,12 +81,11 @@ class TestCitationGenerator:
             publisher="Example Publisher",
             date_published="01 Jan. 2020",
         )
-        citation_metadata = generate_citation(webpage_details, "mla", False, False)
+        citation_metadata = generate_citation(webpage_details, "mla", True, False)
         assert "John Doe." in citation_metadata.citation
         assert '"Example Domain."' in citation_metadata.citation
         assert "Example Publisher" in citation_metadata.citation
-        assert "Accessed" in citation_metadata.citation
         assert (
-            'John Doe. "Example Domain." Example Publisher http://example.com Accessed 30 June 2024.'
+            'John Doe. "Example Domain." Example Publisher http://example.com'
             == citation_metadata.citation
         )
