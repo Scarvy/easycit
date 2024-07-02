@@ -1,6 +1,7 @@
 import re
 from dataclasses import asdict, dataclass
 from datetime import datetime
+from pathlib import Path
 
 import click
 import pyperclip
@@ -29,6 +30,38 @@ class WebPageDetails:
     author: str = None
     publisher: str = None
     date_published: str = None
+
+
+def user_dir() -> Path:
+    return Path(click.get_app_dir("easycit"))
+
+
+def user_database_path() -> Path:
+    return user_dir() / "logs.db"
+
+
+def init_database():
+    db_path = user_database_path()
+    if not db_path.exists():
+        db = sqlite_utils.Database(db_path)
+        db.create_table(
+            "citations",
+            {
+                "citation": str,
+                "format_type": str,
+                "url": str,
+                "title": str,
+                "author": str,
+                "publisher": str,
+                "date_published": str,
+                "date_accessed": str,
+            },
+            hash_id_columns=["citation"],
+        )
+        db["citations"].enable_fts(["citation"], create_triggers=True, replace=True)
+        return db
+    else:
+        return sqlite_utils.Database(db_path)
 
 
 @click.group(cls=DefaultGroup, default="create", default_if_no_args=True)
@@ -66,9 +99,6 @@ def cli():
     help="Override specific fields. Usage: --override <field> <value>",
 )
 @click.option(
-    "--dbname", default="citations.db", help="Name of the SQLite database file."
-)
-@click.option(
     "--dump", is_flag=False, default=True, help="Don't dump citation to stdout."
 )
 @click.option(
@@ -77,7 +107,7 @@ def cli():
     default=True,
     help="Prevent citation from being logged into the database.",
 )
-def create_citation(url, fmt, no_date, no_url, override, dbname, dump, log):
+def create_citation(url, fmt, no_date, no_url, override, dump, log):
     """Generate citations in common formats."""
 
     citation_metadata = get_citation_metadata(url, fmt, no_date, no_url, dict(override))
@@ -85,7 +115,7 @@ def create_citation(url, fmt, no_date, no_url, override, dbname, dump, log):
     if dump:
         click.echo(citation_metadata.citation)
     if log:
-        db = sqlite_utils.Database(dbname)
+        db = init_database()
         citations_table = db.table("citations")
         citations_table.upsert(asdict(citation_metadata), hash_id="id")
         citations_table.populate_fts(["citation"])
@@ -123,9 +153,6 @@ def create_citation(url, fmt, no_date, no_url, override, dbname, dump, log):
     help="Override specific fields. Usage: --override <field> <value>",
 )
 @click.option(
-    "--dbname", default="citations.db", help="Name of the SQLite database file."
-)
-@click.option(
     "--dump", is_flag=False, default=True, help="Don't dump citation to stdout."
 )
 @click.option(
@@ -149,7 +176,7 @@ def batch_citations(f, fmt, no_date, no_url, override, dbname, dump, log):
             if dump:
                 click.echo(citation_metadata.citation)
             if log:
-                db = sqlite_utils.Database(dbname)
+                db = init_database()
                 citations_table = db.table("citations")
                 citations_table.upsert(asdict(citation_metadata), hash_id="id")
                 citations_table.populate_fts(["citation"])
@@ -161,7 +188,7 @@ def batch_citations(f, fmt, no_date, no_url, override, dbname, dump, log):
     pyperclip.copy("\n".join(citation for citation in citations))
 
 
-CITATIONS_SQL = """
+LOGS_SQL = """
     select
         id,
         citation,
@@ -198,27 +225,33 @@ def logs():
 )
 @click.option("-q", "--query", help="Search for logs matching this string")
 def logs_list(count, query):
-    """Show logged citations"""
-    db = sqlite_utils.Database("citations.db")
-    db["citations"].populate_fts(["citation"])
+    """Show logged citations."""
+    db = init_database()
 
     limit = ""
     if count is not None and count > 0:
         limit = " limit {}".format(count)
 
-    sql = CITATIONS_SQL
+    sql = LOGS_SQL
 
     sql_format = {"limit": limit}
 
     final_sql = sql.format(**sql_format)
 
-    if query:
+    if query:  # full-text search
         for row in list(db["citations"].search(query)):
             click.echo(f"{row["citation"]}")
     else:
         rows = list(db.query(final_sql))
         for row in rows:
             click.echo(f"{row["citation"]}")
+
+
+@logs.command(name="path")
+@click.option("--dbname", default="logs.db", help="Name of the SQLite database file.")
+def logs_path(dbname):
+    "Output the path to the logs.db file"
+    click.echo(user_database_path(dbname))
 
 
 def get_citation_metadata(
