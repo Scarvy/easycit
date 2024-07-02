@@ -161,7 +161,7 @@ def create_citation(url, fmt, no_date, no_url, override, dump, log):
     default=True,
     help="Prevent citation from being logged into the database.",
 )
-def batch_citations(f, fmt, no_date, no_url, override, dbname, dump, log):
+def batch_citations(f, fmt, no_date, no_url, override, dump, log):
     """Generate citations for multiple URLs."""
     urls = [line.strip() for line in f.readlines()]
 
